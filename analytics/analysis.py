@@ -682,6 +682,7 @@ I recommend **{best_name}** among these three classifiers because it has the bes
 
 Reload test prediction on a raw row: `{modeling['reload_prediction']}`. Saved pipeline: `{modeling['saved_pipeline']}`.
 """
+    text = text.replace("](plots/", "](outputs/plots/")
     (BASE_DIR / "README.md").write_text(text, encoding="utf-8")
 
 

@@ -17,7 +17,7 @@ Use `python analysis.py --offline` to read the committed `titanic.csv` directly.
 ## Design decisions
 
 - Keep the raw CSV as the reproducible offline copy; drop only rows with low missingness in required fields and exclude highly sparse or redundant columns.
-- Use one cleaned working dataset for the EDA and modeling stages. EDA fills age with the median for the exploratory plots, while modeling keeps missing ages until the stratified split and learns the median inside each training-only preprocessing pipeline.
+- Use one cleaned working dataset for the EDA and modeling stages. EDA fills age with the median within sex-and-class groups for the exploratory plots, while modeling keeps missing ages until the stratified split and learns the median inside each training-only preprocessing pipeline.
 - Keep transformations inside scikit-learn pipelines so imputers, encoders, and scalers are fitted on training data only. Save the fitted preprocessing and estimator together for raw-row predictions.
 
 ## Measured results and interpretations
@@ -41,11 +41,11 @@ IQR outlier counts: age **32**, fare **114**. Fare mean = 32.0967, median = 14.4
 
 | Age histogram and box plot |
 |---|
-| ![Age distribution and box plot](plots/age_distribution_and_boxplot.png) |
+| ![Age distribution and box plot](outputs/plots/age_distribution_and_boxplot.png) |
 
 | Fare histogram and box plot |
 |---|
-| ![Fare distribution and box plot](plots/fare_distribution_and_boxplot.png) |
+| ![Fare distribution and box plot](outputs/plots/fare_distribution_and_boxplot.png) |
 
 ## Bivariate and Multivariate Story
 
@@ -53,35 +53,35 @@ Survival rate by sex: `{"female": 0.7403846153846154, "male": 0.1889081455805892
 
 The two strongest absolute off-diagonal correlations are `pclass` with `fare` (r = -0.5482) and `sibsp` with `parch` (r = 0.4145). Class and fare are negatively associated, consistent with higher fares being more common among lower-numbered classes; siblings/spouses and parents/children counts are positively associated, as family groups often traveled together.
 
-![Six-column correlation heatmap](plots/correlation_heatmap.png)
+![Six-column correlation heatmap](outputs/plots/correlation_heatmap.png)
 
 ### Survival Rate by Sex
 
-![Survival by sex](plots/survival_by_sex.png)
+![Survival by sex](outputs/plots/survival_by_sex.png)
 
 Women survived at 74.0%, compared with 18.9% of men. This large descriptive difference makes sex an important predictor in this sample, but it is not by itself a causal explanation.
 
 ### Survival Rate by Passenger Class
 
-![Survival by class](plots/survival_by_class.png)
+![Survival by class](outputs/plots/survival_by_class.png)
 
 Survival rates were 62.6% in first class, 47.3% in second class, and 24.2% in third class. The stepwise decline shows a clear association between passenger class and survival.
 
 ### Survival by Class and Sex
 
-![Survival by class and sex](plots/survival_by_class_and_sex.png)
+![Survival by class and sex](outputs/plots/survival_by_class_and_sex.png)
 
 Within first, second, and third class, female survival was 96.7%, 92.1%, and 50.0%; corresponding male rates were 36.9%, 15.7%, and 13.5%. Both variables distinguish outcomes, and the grouped chart makes their interaction visible rather than averaging across groups.
 
 ### Age, Sex, and Survival
 
-![Age by sex and survival](plots/age_by_sex_and_survival.png)
+![Age by sex and survival](outputs/plots/age_by_sex_and_survival.png)
 
 Median ages for women were 27.0 among survivors and 21.5 among non-survivors; for men they were 27.0 and 26.0. The overlap in the box distributions indicates that age adds context but does not cleanly separate survival outcomes by itself.
 
 ### Fare by Passenger Class
 
-![Fare by passenger class](plots/fare_by_class.png)
+![Fare by passenger class](outputs/plots/fare_by_class.png)
 
 Median fares were 58.69, 14.25, and 8.05 for first, second, and third class respectively. Fare therefore reinforces the class pattern in the survival charts, while also acting as a proxy for ticket/cabin access rather than an isolated cause.
 
@@ -107,9 +107,9 @@ The stratified split retained a similar survival share in both partitions (train
 
 Classification and regression metric columns are kept separate; `-` means that metric does not apply to that model type.
 
-![Classifier ROC curves](plots/roc_curves.png)
+![Classifier ROC curves](outputs/plots/roc_curves.png)
 
-![Decision tree](plots/decision_tree.png)
+![Decision tree](outputs/plots/decision_tree.png)
 
 ### Imbalance Handling
 
@@ -131,7 +131,7 @@ GridSearchCV best parameters: `{"model__max_depth": 5, "model__max_features": "s
 
 Linear regression predicts fare from the other available features, including survival outcome. Metrics: MAE 19.9647, RMSE 38.4242, R-squared 0.3586, adjusted R-squared 0.3284. The residual standard deviations across predicted-fare quartiles vary by a factor of 8.41. Under the stated 2x spread check, this suggests heteroscedasticity; the residual plot is included below for visual inspection.
 
-![Fare regression residual plot](plots/fare_regression_residuals.png)
+![Fare regression residual plot](outputs/plots/fare_regression_residuals.png)
 
 ## Deployment Recommendation
 
