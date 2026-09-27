@@ -1,29 +1,12 @@
 # Zepto AI/ML Capstone
 
-This repository brings together three small, reproducible pieces of an AI/ML workflow: a Books to Scrape data pipeline, a Titanic analysis and modeling workflow, and a policy assistant for Zepto. Each module has its own dependencies and run instructions below.
+An end-to-end capstone with three independently runnable modules: a book catalog data pipeline, Titanic analytics and modeling, and a grounded Zepto policy assistant.
 
-## Setup
+Each module keeps its own dependencies and documentation. The required baseline runs locally without a paid API key.
 
-Use Python 3.11 or newer. Each module has a separate `requirements.txt`; install only the requirements for the module you plan to run.
+## Quick start
 
-```powershell
-python -m pip install -r data_pipeline/requirements.txt
-python -m pip install -r analytics/requirements.txt
-python -m pip install -r support_assistant/requirements.txt
-```
-
-## Data pipeline
-
-From the repository root:
-
-```powershell
-# Zepto Data & AI Platform
-
-One repository containing the three capstone modules: scraped catalog data, a Titanic analytics/modeling workflow, and a grounded Zepto policy assistant. Each module has its own `requirements.txt`; install only the module dependencies you plan to run. Python 3.11 or newer is recommended. No paid service or API key is needed for the required baseline.
-
-## Setup
-
-Run from the repository root in PowerShell:
+Use Python 3.11 or newer from the repository root:
 
 ```powershell
 python -m venv .venv
@@ -33,39 +16,64 @@ python -m pip install -r analytics/requirements.txt
 python -m pip install -r support_assistant/requirements.txt
 ```
 
-The analytics command uses `sns.load_dataset("titanic")` once by default; the committed `analytics/titanic.csv` supports offline evaluation. The support assistant downloads `all-MiniLM-L6-v2` on first use if it is not cached; embedding and ChromaDB retrieval are local afterward.
+The support assistant downloads the `all-MiniLM-L6-v2` embedding model the first time it starts. The model and ChromaDB index are then used locally.
 
-## Run Modules
+## Modules
 
-### Data Pipeline
+### 1. Data pipeline
 
 ```powershell
 python data_pipeline/pipeline.py
 ```
 
-Scrapes and paginates four Books to Scrape categories, cleans fields, converts GBP to INR at the fixed project rate **1 GBP = 105.50 INR**, loads normalized SQLite tables, executes the saved SQL, and verifies the SQL join against an in-memory pandas merge. `python data_pipeline/pipeline.py --offline` runs a clearly labeled synthetic demonstration fixture, not the required live scrape. Details and outputs: [data_pipeline/README.md](data_pipeline/README.md).
+The pipeline discovers category links from Books to Scrape, paginates listings, cleans numeric and availability fields, converts GBP to INR at `1 GBP = 105.50 INR`, loads normalized SQLite tables, runs saved SQL queries, and checks the SQL join against a pandas merge.
 
-### Analytics
+Use `python data_pipeline/pipeline.py --offline` for a deterministic demonstration run without network access. See [data_pipeline/README.md](data_pipeline/README.md) for the data model and generated files.
+
+### 2. Analytics
 
 ```powershell
 python analytics/analysis.py
 ```
 
-`python analytics/analysis.py --offline` uses the committed Titanic CSV. The workflow preserves the raw CSV, reports missingness and EDA findings, writes plots and model comparisons, trains/tunes leakage-safe pipelines, evaluates linear fare regression, and saves/reloads a complete classifier pipeline. Details: [analytics/README.md](analytics/README.md).
+Use `python analytics/analysis.py --offline` to run against the committed Titanic CSV. The workflow profiles missingness, creates EDA plots, compares three classifiers, evaluates fare regression, tunes a random forest, and saves a complete preprocessing-plus-model pipeline under `analytics/outputs/`.
 
-### Support Assistant
+See [analytics/README.md](analytics/README.md) for the measured findings and model interpretation.
+
+### 3. Support assistant
 
 ```powershell
 $env:MOCK_LLM = "1"
 python -m uvicorn main:app --app-dir support_assistant --host 127.0.0.1 --port 7860
 ```
 
-Post `{"query":"How long does delivery take?"}` to `http://127.0.0.1:7860/ask`. The default mock path makes no LLM API call; policy questions still use MiniLM embeddings and ChromaDB retrieval. `MOCK_LLM=0` enables the optional OpenAI-compatible endpoint when configured with environment variables. Build locally with `docker build -t zepto-support support_assistant` and run with `docker run --rm -p 7860:7860 zepto-support`. Details, transcripts, and architecture: [support_assistant/README.md](support_assistant/README.md).
+Ask the API with:
 
-## Design Summary
+```powershell
+Invoke-RestMethod -Method Post `
+	-Uri http://127.0.0.1:7860/ask `
+	-ContentType "application/json" `
+	-Body '{"query":"How long does delivery take?"}'
+```
 
-- **Data engineering:** homepage-discovered category URLs avoid stale slugs; malformed numeric fields use median imputation, unparseable availability rows are dropped, and a normalized SQLite foreign key keeps category names out of book rows.
-- **Analytics:** a single raw dataset is saved before cleaning; EDA cleaning decisions are threshold-based, while model imputation/encoding/scaling live inside train-fitted scikit-learn pipelines. Classification and regression metrics are reported separately.
-- **GenAI:** each exact policy document is embedded as one chunk in a persistent cosine ChromaDB collection. LangGraph routes policy queries to retrieval and general queries to a fixed mock answer; Pydantic validates the response shape.
+Policy questions use MiniLM embeddings and ChromaDB retrieval. General questions receive a clear policy-only response. Run `python support_assistant/smoke_test.py` to exercise both graph branches without starting the server. See [support_assistant/README.md](support_assistant/README.md) for the optional OpenAI-compatible LLM configuration and Docker commands.
 
-The GitHub submission is one public repository link for this root and all three module folders. The required feature-branch/merge history is a repository-level workflow item and should be visible in `git log --graph --all`.
+## Engineering notes
+
+- The data pipeline uses a normalized `categories` table and a foreign key from `books`.
+- Modeling transformations are fitted inside scikit-learn pipelines after the train/test split to avoid leakage.
+- The assistant keeps retrieval local, validates API responses with Pydantic, and uses LangGraph for explicit intent routing.
+- Offline modes are labeled as demonstrations; the normal pipeline paths remain available for the required live or downloaded datasets.
+
+## Verification
+
+From the repository root:
+
+```powershell
+python data_pipeline/pipeline.py --offline
+python analytics/analysis.py --offline
+$env:MOCK_LLM = "1"
+python support_assistant/smoke_test.py
+```
+
+The expected checks are 60 offline books across four categories, regenerated analytics outputs, and two valid assistant responses with source IDs for the policy query.
