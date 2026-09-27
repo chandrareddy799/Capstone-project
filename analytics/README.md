@@ -17,7 +17,7 @@ Use `python analysis.py --offline` to read the committed `titanic.csv` directly.
 ## Design decisions
 
 - Keep the raw CSV as the reproducible offline copy; drop only rows with low missingness in required fields and exclude highly sparse or redundant columns.
-- Use one cleaned working dataset for the EDA and modeling stages. EDA fills age with the median within sex-and-class groups for the exploratory plots, while modeling keeps missing ages until the stratified split and learns the median inside each training-only preprocessing pipeline.
+- Use one cleaned working dataset for the EDA and modeling stages. EDA fills age with the median for the exploratory plots, while modeling keeps missing ages until the stratified split and learns the median inside each training-only preprocessing pipeline.
 - Keep transformations inside scikit-learn pipelines so imputers, encoders, and scalers are fitted on training data only. Save the fitted preprocessing and estimator together for raw-row predictions.
 
 ## Measured results and interpretations
@@ -118,10 +118,10 @@ Training class counts were `{"not_survived": 411, "survived": 255, "train_surviv
 | Strategy | Precision | Recall | F1 |
 |---|---:|---:|---:|
 | Baseline | 0.6737 | 0.7529 | 0.7111 |
-| `class_weight="balanced"` | 0.6774 | 0.7412 | 0.7079 |
-| SMOTE (training rows only) | 0.6702 | 0.7412 | 0.7039 |
+| class_weight='balanced' | 0.6633 | 0.7647 | 0.7104 |
+| SMOTE (training rows only) | 0.6632 | 0.7412 | 0.7000 |
 
-`Baseline` had the highest F1 (0.7111) in this held-out comparison. Class weighting gave marginally higher precision (0.6774), while SMOTE did not improve the measured precision/recall balance. This is one split's result, not a universal ranking.
+`Baseline` had the highest F1 (0.7111) in this held-out comparison. This favors the observed precision/recall balance for this split; another operational objective could prefer higher recall even at lower precision.
 
 ### Random Forest Grid Search
 
